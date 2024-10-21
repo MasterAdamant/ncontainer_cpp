@@ -26,6 +26,9 @@ namespace NE{
             void SetLength(const size_t);
             void Reallocate(const size_t);
             void CopyData(const T*, const size_t);
+        
+        protected:
+            void ReallocateSave(const size_t);
 
         public:
             NContainer();
@@ -38,15 +41,12 @@ namespace NE{
             NContainer& Assign(const T*, const size_t);
             NContainer& Assign(const NContainer&);
 
-            inline const T* GetValue() const {
-                return this->list;
-            };
-            inline const size_t GetLength() const {
-                return this->length;
-            };
+            const T* GetValue() const { return this->list; };
+            const size_t GetLength() const { return this->length; };
 
-            int Contains(const T);
-            bool Contains(const NContainer);
+            int Contains(const T) const;
+            int Contains(const T*) const;
+            bool Contains(const NContainer) const;
 
             NContainer& Append(const T, const size_t);
             NContainer& Remove(const size_t);
@@ -60,7 +60,94 @@ namespace NE{
             T* ToArray(){return this->list;};
             void operator=(const T* value) const {this->Assign(value);};
 
-            
+            class Iterator{
+                using Iterator_category = std::forward_iterator_tag;
+                using difference_type   = std::ptrdiff_t;
+                using value_type        = T;
+                using pointer           = T*;  // or also value_type*
+                using reference         = T&;
+                private:
+                    size_t index=0;
+                    pointer ptr;
+                    const NContainer* m_container;
+                public:
+                    Iterator(pointer ptr, const NContainer<value_type>& container){
+                        if(container.Contains(ptr)<0){
+                            throw;
+                        }
+                        this->ptr=ptr;
+                        this->index = container.Contains(ptr);
+                        m_container = &container;
+                    }
+                    Iterator(const size_t index, const NContainer<value_type>& container){
+                        if(index>container.GetLength()){
+                            throw;
+                        }
+                        this->index = (index);
+                        ptr = container.list + index;
+                        m_container = &container;
+                    }
+
+                    size_t GetIndex() const { return index; };
+                    const T* GetPointer() const { return ptr; };
+                    NContainer* GetContainer() const { return m_container; };
+
+                    reference operator=(const reference value) { *ptr=value.ptr; index=GetIndex(); return *this;};
+
+                    reference operator*(){ return *ptr; }
+                    pointer operator->() { return ptr; }
+
+                    Iterator operator++() { ptr++; ++index; return *this; };
+                    Iterator operator++(int) { Iterator tmp = *this; ++(*this); return tmp; };
+                    Iterator operator--() { ptr--; --index; return *this; };
+                    Iterator operator--(int) { Iterator tmp = *this; --(*this); return tmp; };
+
+                    Iterator& operator+=(int value) {ptr+=value; index+=value; return *this;};
+                    Iterator operator+(int value) const {return Iterator(index+value, *m_container);};
+                    Iterator& operator-=(int value) {ptr-=value; index-=value; return *this;};
+                    Iterator operator-(int value) const {return Iterator(index-value, *m_container);};
+                    
+                    bool operator== (const Iterator& b) const { return ptr == b.GetPointer(); };
+                    bool operator!= (const Iterator& b) const { return ptr != *b; }; 
+                    bool operator<(const Iterator& other) const { return other.GetIndex()<other.GetIndex();};
+                    bool operator<=(const Iterator& other) const { return other.GetIndex()<=other.GetIndex();};
+                    bool operator>=(const Iterator& other) const { return other.GetIndex()>=other.GetIndex();};
+                    bool operator>(const Iterator& other) const { return other.GetIndex()>other.GetIndex();};
+                    
+                    ~Iterator(){};
+            };
+            Iterator begin(){
+                return Iterator(&list[0]);
+            }
+            Iterator end(){
+                return Iterator(&list[length-1]);
+            }
+
+            NContainer& BubbleSort(){
+                for(int i=0; i<GetLength(); ++i){
+                    for(int j=0; j<GetLength(); ++j){
+                        if(list[j]>list[i]){
+                            T temp = list[i];
+                            list[i] = list[j];
+                            list[j] = temp;
+                        }
+                    }
+                }
+                return *this;
+            }
+            NContainer& InsertionSort(){
+                for(int i=0;i<GetLength(); ++i){
+                    for(int j=0; j<i; ++j){
+                        if(list[i]<list[j]){
+                            T temp = list[i];
+                            list[i] = list[j];
+                            list[j] = temp;
+                            break;
+                        }
+                    }
+                }
+                return *this;
+            }
     };
 
     template<typename T>
@@ -84,7 +171,33 @@ namespace NE{
         list = new T[capacity];
     }
 
-
+    template<typename T>
+    void NContainer<T>::ReallocateSave(const size_t length){
+        if(list==nullptr){
+            SetLength(length);
+            list = new T[capacity];
+            return;
+        }
+        size_t oldSize = GetLength();
+        T* save = new T[oldSize];
+        for (size_t i=0; i<oldSize; ++i){
+            save[i] = list[i];
+        }
+        SetLength(length);
+        delete[] list;
+        list = new T[capacity];
+        for (size_t i=0; i<(oldSize < length)?oldSize:length; ++i){
+            list[i] = save[i];
+        }
+        delete[] save;
+    }
+    // --- Почему в реаллокации не сохраняются данные? ---
+    // Фукнции, расположеные в приватной секции, идут в порядке "увеличения безопасности".
+    // Функция SetLength() обязывает разработчика реаллоцировать данные, передавая все в его
+    // управление. Функция Reallocate() упрощает это и сама их реаллоцирует, оставляя воз-
+    // можность разработчику или сохранить данные через CopyData(), или все очистить.
+    // Upd.: Я решил реализовать сохранение данных при реаллокации в protected, так что
+    // при БОЛЬШОМ желании, это все можно переписать.
     template<typename T>
     void NContainer<T>::CopyData(const T* value,const size_t length){
         Reallocate(length);
@@ -94,7 +207,7 @@ namespace NE{
     }
 
     template<typename T>
-    int NContainer<T>::Contains(const T value){
+    int NContainer<T>::Contains(const T value) const {
         for(int i=0; i<GetLength(); ++i){
             if(list[i] == value){
                 return i;
@@ -104,7 +217,17 @@ namespace NE{
     }
 
     template<typename T>
-    bool NContainer<T>::Contains(const NContainer<T> value){
+    int NContainer<T>::Contains(const T* value) const {
+        for(int i=0; i<GetLength(); ++i){
+            if(&list[i] == value){
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    template<typename T>
+    bool NContainer<T>::Contains(const NContainer<T> value) const {
         for(size_t i=0; i<value.GetLength(); ++i){
             if(Contains(value[i])<0){
                 return false;
@@ -181,7 +304,7 @@ namespace NE{
             result[i] = list[t];
         }
         Assign(result, GetLength()-1);
-        delete result;
+        delete[] result;
         return *this;
     }
 
@@ -224,7 +347,15 @@ namespace NE{
         return *this;
     }
     
-    
+    template<typename T>
+    std::ostream& operator<<(std::ostream& os, const NContainer<T>& cont) {
+        os << "{ ";
+        for(size_t i=0; i<cont.GetLength(); ++i){
+            os << cont[i] << " ";
+        }
+        os << "}";
+        return os;
+    }
 }
 
 
