@@ -1,0 +1,94 @@
+# Compiled object files
+*.obj
+*.o
+*.lo
+*.slo
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic Libraries
+*.dll
+*.so
+*.dylib
+
+# Compiled Static Libraries
+*.lib
+*.a
+*.lai
+*.la
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.pdb
+*.idb
+*.ipdb
+*.iobj
+*.ilk
+*.dbg
+
+# Visual Studio build folders
+[Bb]uild/
+[Bb]in/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+ARM/
+ARM64/
+
+# Visual Studio project files (generated on build)
+*.tlog
+*.log
+*.vspscc
+*.vssscc
+*.sdf
+*.opensdf
+*.cache
+*.db
+*.VC.db
+
+# Visual Studio IDE and user-specific
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code settings
+.vscode/
+.history/
+.ionide/
+*.code-workspace
+
+# CMake and CMake Tools for VS Code
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+CMakeUserPresets.json
+
+# NuGet packages
+*.nupkg
+packages/
+*.snupkg
+
+# DotCover or Resharper
+.idea/
+*.dotCover
+
+# Backup and autosave
+*~
+*.swp
+*.bak
+
+# Generated files
+*.tmp
+
+# Optional: Ignore inlined template file if generated
+# Parameter.inl (if generated via script)
